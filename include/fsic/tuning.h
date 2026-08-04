@@ -35,6 +35,22 @@ constexpr int MIN_REGION_H = 80;
 // length, bounded by qualifying rows/cols on both sides, are bridged before
 // taking the longest contiguous run.
 constexpr int PROBE_MAX_GAP_PX = 200;
+// Grow-from-core column threshold. The strict PROBE_LINE_FRACTION bar finds a
+// confident core of columns, but columns near a region's left/right edge are
+// often background-dominant (a page's gradient margin) and carry real but
+// weak motion, so they fall short of it and the region is reported narrower
+// than the pane actually is. After the core is found, columns are appended
+// outward from it while they clear this lower bar in EVERY probe step;
+// unanimity is what still rejects one-shot animations during growth.
+// Measured on a base44.com editor preview (band height 1248, per-step changed
+// pixels per column): the non-scrolling sidebar peaked at 18, while the
+// region's own weak right-edge columns bottomed out at 49. That is only a
+// ~2.7x separation, so this sits near the geometric midpoint (~30px) rather
+// than hugging either side. Growth is anchored to the strict core and halts
+// at the first column that fails, so a too-low value widens the region
+// rather than relocating it.
+constexpr float PROBE_GROW_LINE_FRACTION = 0.024f;
+constexpr int PROBE_GROW_MIN_PX = 8;
 constexpr int SCROLL_TO_TOP_MAX_ITERS = 400;
 
 } // namespace fsic

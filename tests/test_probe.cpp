@@ -226,6 +226,49 @@ void test_probe_does_not_bridge_huge_gap() {
     }
 }
 
+// An adjacent panel that animates weakly but CONSISTENTLY (a few changed rows
+// in every single probe step) is the false-positive the grow-from-core pass
+// risks absorbing: unanimity alone does not exclude it, only the
+// PROBE_GROW_LINE_FRACTION bar does. Here the neighbour is a 4px bar creeping
+// down a flat background -- ~6 changed rows per step against a grow threshold
+// of ~12 -- so the detected region must stop at the panel boundary.
+void test_weak_neighbour_not_absorbed() {
+    const int main_w = 200, W = 400, H = 500;
+    const int kFrames = 15;
+    const int mult = 97, main_rate = 31;
+    const int bar_h = 4, bar_step = 1, bar_y0 = 10;
+
+    std::vector<Image> frames;
+    for (int i = 0; i < kFrames; ++i) {
+        Image f;
+        f.resize(W, H);
+        // Left panel: full-height scanline scroller (every row changes).
+        fill_scanline_block(f, 0, main_w, i * main_rate, mult);
+        // Right panel: flat background plus one slowly creeping bar.
+        for (int y = 0; y < H; ++y)
+            for (int x = main_w; x < W; ++x) set_px(f, x, y, 128, 128, 128);
+        const int by = bar_y0 + i * bar_step;
+        for (int y = by; y < std::min(H, by + bar_h); ++y)
+            for (int x = main_w; x < W; ++x) set_px(f, x, y, 20, 20, 20);
+        frames.push_back(std::move(f));
+    }
+
+    const std::string dir = "test_probe_weak_neighbour";
+    write_frames(dir, frames);
+    SyntheticBackend backend(dir);
+    FSIC_CHECK(backend.init());
+
+    ProbeOptions opts;
+    opts.search_bounds = Rect{0, 0, W, H};
+    ProbeResult result;
+    Status st = probe_scroll_region(backend, Point{100, 250}, opts, &result);
+    FSIC_CHECK(st);
+    if (st) {
+        FSIC_CHECK(near(result.region.x, 0, 4));
+        FSIC_CHECK(near(result.region.right(), main_w, 4));
+    }
+}
+
 void test_one_shot_animation_rejected() {
     const int W = 100, H = 100;
     const int kFrames = 15;
@@ -284,6 +327,7 @@ int main() {
     test_two_scroller_page();
     test_probe_bridges_paragraph_gap();
     test_probe_does_not_bridge_huge_gap();
+    test_weak_neighbour_not_absorbed();
     test_one_shot_animation_rejected();
     test_fully_static_rejected();
     if (g_fsic_test_failures == 0) std::printf("test_probe: all checks passed\n");
