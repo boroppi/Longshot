@@ -81,7 +81,7 @@ void detect_static_bands(const std::vector<Image>& frames, Band* out_top, Band* 
     const size_t m = std::min<size_t>(n, 3);
     if (m < 2) {
         *out_top = Band{0, 0};
-        *out_bottom = Band{0, 0};
+        *out_bottom = Band{H, H};
         return;
     }
 
