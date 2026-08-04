@@ -1,0 +1,7 @@
+stb_image_write.h
+Source: https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h
+Upstream commit (last touching this file): 1ee679ca2ef753a528db5ba6801e1067b40481b8 (Sean Barrett, 2021-07-12, "update version number")
+Retrieved: 2026-08-03
+SHA-256: cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
+License: public domain / MIT dual-license (see header of stb_image_write.h)
+Unmodified verbatim copy. Do not edit in place.
