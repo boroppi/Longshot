@@ -22,14 +22,19 @@ constexpr int PROBE_PIXEL_EPS = 8;
 constexpr float PROBE_LINE_FRACTION = 0.12f;
 constexpr int MIN_REGION_W = 80;
 constexpr int MIN_REGION_H = 80;
-// Real content (text lines, paragraph spacing) has inter-line/inter-word
-// whitespace that shows zero motion between frames even inside a genuinely
-// scrolling region. Without closing these small gaps, the unanimous 3-step
-// row/col intersection fragments into short runs (observed: a real Notepad
-// capture with hundreds of individually-qualifying rows collapsed to a
-// 10-row best run). Gaps up to this length, bounded by qualifying rows/cols
-// on both sides, are bridged before taking the longest contiguous run.
-constexpr int PROBE_MAX_GAP_PX = 24;
+// Real content (text lines, paragraph spacing, section padding) has
+// inter-line/inter-word/inter-section whitespace that shows zero motion
+// between frames even inside a genuinely scrolling region. Without closing
+// these gaps, the unanimous 3-step row/col intersection fragments into short
+// runs. Originally 24, sized only for Notepad's line spacing (observed:
+// hundreds of individually-qualifying rows collapsed to a 10-row best run).
+// That was too small for real web content: a base44.com editor preview pane
+// showed bounded (real-content-on-both-sides) row gaps up to 147px between
+// page sections, which clipped the detected region well above the page's
+// actual bottom. Raised to 200 to cover that with margin. Gaps up to this
+// length, bounded by qualifying rows/cols on both sides, are bridged before
+// taking the longest contiguous run.
+constexpr int PROBE_MAX_GAP_PX = 200;
 constexpr int SCROLL_TO_TOP_MAX_ITERS = 400;
 
 } // namespace fsic

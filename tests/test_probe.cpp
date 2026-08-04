@@ -10,6 +10,7 @@
 #include "fsic/backend.h"
 #include "fsic/image.h"
 #include "fsic/image_io.h"
+#include "fsic/tuning.h"
 #include "platform/synthetic/synthetic_backend.h"
 #include "test_util.h"
 
@@ -152,6 +153,79 @@ void test_two_scroller_page() {
     }
 }
 
+// Full-width scanline pattern that scrolls every row EXCEPT a fixed band
+// [gap_y0, gap_y1) held at a constant value regardless of frame -- stands in
+// for a paragraph/section gap inside an otherwise-scrolling page.
+Image make_scrolling_frame_with_gap(int w, int h, int row_offset, int mult, int gap_y0, int gap_y1) {
+    Image img;
+    img.resize(w, h);
+    for (int y = 0; y < h; ++y) {
+        const uint8_t v = (y >= gap_y0 && y < gap_y1) ? static_cast<uint8_t>(128)
+                                                        : scanline_color(row_offset + y, mult);
+        for (int x = 0; x < w; ++x) set_px(img, x, y, v, v, v);
+    }
+    return img;
+}
+
+void test_probe_bridges_paragraph_gap() {
+    const int W = 100, H = 400;
+    const int kFrames = 15;
+    const int mult = 97, rate = 31;  // same as test_two_scroller_page's main_rate: guaranteed large per-row delta
+    const int gap_y0 = 180, gap_y1 = 220;  // 40px static band: > old 24px threshold, well under the new one
+
+    std::vector<Image> frames;
+    for (int i = 0; i < kFrames; ++i)
+        frames.push_back(make_scrolling_frame_with_gap(W, H, i * rate, mult, gap_y0, gap_y1));
+
+    const std::string dir = "test_probe_gap_bridge";
+    write_frames(dir, frames);
+    SyntheticBackend backend(dir);
+    FSIC_CHECK(backend.init());
+
+    ProbeOptions opts;
+    opts.search_bounds = Rect{0, 0, W, H};
+    ProbeResult result;
+    Status st = probe_scroll_region(backend, Point{50, 50}, opts, &result);
+    FSIC_CHECK(st);
+    if (st) {
+        // The static band sits inside a single scrolling region; the gap
+        // threshold must bridge it so the detected region covers the full
+        // moving extent, not just the segment above the gap (this is the
+        // base44.com clipping bug: the old 24px threshold left the region
+        // truncated right at a section gap).
+        FSIC_CHECK(near(result.region.y, 0, 4));
+        FSIC_CHECK(result.region.bottom() > gap_y1 + 20);
+    }
+}
+
+void test_probe_does_not_bridge_huge_gap() {
+    const int W = 100, H = 600;
+    const int kFrames = 15;
+    const int mult = 97, rate = 31;
+    const int gap_y0 = 150;
+    const int gap_y1 = gap_y0 + PROBE_MAX_GAP_PX + 50;  // deliberately past the bridge threshold
+
+    std::vector<Image> frames;
+    for (int i = 0; i < kFrames; ++i)
+        frames.push_back(make_scrolling_frame_with_gap(W, H, i * rate, mult, gap_y0, gap_y1));
+
+    const std::string dir = "test_probe_gap_too_big";
+    write_frames(dir, frames);
+    SyntheticBackend backend(dir);
+    FSIC_CHECK(backend.init());
+
+    ProbeOptions opts;
+    opts.search_bounds = Rect{0, 0, W, H};
+    ProbeResult result;
+    Status st = probe_scroll_region(backend, Point{50, 50}, opts, &result);
+    FSIC_CHECK(st);
+    if (st) {
+        // A gap wider than the bridge threshold must NOT be spanned: the
+        // detected region should stay confined to one side of it.
+        FSIC_CHECK(result.region.bottom() <= gap_y0 + 4 || result.region.y >= gap_y1 - 4);
+    }
+}
+
 void test_one_shot_animation_rejected() {
     const int W = 100, H = 100;
     const int kFrames = 15;
@@ -208,6 +282,8 @@ void test_fully_static_rejected() {
 
 int main() {
     test_two_scroller_page();
+    test_probe_bridges_paragraph_gap();
+    test_probe_does_not_bridge_huge_gap();
     test_one_shot_animation_rejected();
     test_fully_static_rejected();
     if (g_fsic_test_failures == 0) std::printf("test_probe: all checks passed\n");
