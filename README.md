@@ -1,4 +1,21 @@
+<div align="center">
+
+<img src="docs/images/logo.png" width="148" alt="Longshot logo: a page with a magenta capture region selected and a downward scroll arrow">
+
 # Longshot
+
+**Full-page screenshots of one scrollable panel — in any app.**<br>
+No browser extension. No DOM or accessibility APIs. Just pixels.
+
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white)](#-building)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](#-building)
+[![CMake](https://img.shields.io/badge/CMake-%E2%89%A53.20-064F8C?logo=cmake&logoColor=white)](#-building)
+[![Tests](https://img.shields.io/badge/tests-5%20passing-2EA043?logo=checkmarx&logoColor=white)](#-building)
+[![Version](https://img.shields.io/badge/version-0.1.0-8957E5)](#)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
+[![Safe input](https://img.shields.io/badge/input-scroll%20%2B%20nav%20keys%20only-FF3BE0)](#-how-it-works-briefly)
+
+</div>
 
 Longshot takes a "full page" screenshot of one scrollable panel inside any
 window — a browser tab's main article, a chat log, a code editor's file, a
@@ -11,11 +28,19 @@ It works against real applications, not just browsers, and it needs no
 browser extension or app cooperation: it drives the mouse wheel and reads
 the screen like a person would, so it captures whatever you can actually see.
 
+|  | |
+|---|---|
+| 🎯 | **Finds the region for you** — hover anywhere; motion-diffing works out which rectangle actually scrolls |
+| 🧩 | **Handles multi-pane UIs** — picks the one panel you pointed at, not the whole window |
+| 🖼️ | **Seamless stitching** — cross-correlated overlap, sticky headers included once, not once per frame |
+| 🔒 | **Never clicks or types** — scroll wheel and 4 navigation keys, nothing else |
+| 🪟 | **Any app, not just browsers** — native windows, PDF viewers, editors |
+
 Windows-only build for now (Linux/X11 and macOS backends are unimplemented;
 `--backend x11` / `--backend macos` return a clean error rather than silently
 doing nothing).
 
-## Why this exists
+## 🤔 Why this exists
 
 Browsers already ship a full-page screenshot tool, but it works by re-rendering
 the page at a synthetic viewport the height of the whole document. That has
@@ -36,7 +61,7 @@ real UI a notch at a time and reads real pixels off the screen. Whatever is
 actually rendered in front of you is what lands in the image, application state
 intact.
 
-## Example
+## 📸 Example
 
 Capturing the article column of a Wikipedia page. Wikipedia has *three*
 independently scrollable columns — the Contents tree on the left, the article
@@ -75,7 +100,7 @@ roughly two screens with no seam where the frames were joined:
 → [**The complete 826×11013 strip**](docs/images/stitched-full-page.jpg) (scaled
 down; it's too tall to show inline at readable size).
 
-## How it works, briefly
+## ⚙️ How it works, briefly
 
 Longshot doesn't read the target application's DOM or accessibility tree —
 that would mean a different integration for every browser and every native
@@ -99,7 +124,7 @@ notches and the four navigation keys (Page Up/Down, Home, End) — never a click
 never typed text — so it can't accidentally follow a link or submit a form
 while it's driving the page.
 
-## Building
+## 🔨 Building
 
 Requires CMake >= 3.20 and a C++17 compiler (MSVC / VS2022 Build Tools on
 Windows).
@@ -110,7 +135,7 @@ cmake --build build --config RelWithDebInfo
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
-## Usage
+## 🚀 Usage
 
 ### Interactive (default)
 
@@ -167,7 +192,7 @@ Very long pages can exceed the default height cap — Longshot stops with a clea
 error rather than writing a truncated image, so raise `--max-height` when you
 mean to capture something enormous.
 
-## Permissions
+## 🔐 Permissions
 
 Windows: none required for a normal desktop session. Input injection into an
 **elevated** target window from a non-elevated Longshot process fails silently
@@ -178,7 +203,7 @@ Capture needs an unlocked, active desktop session: with the workstation locked
 there are no real pixels to read, and Longshot reports a capture failure rather
 than writing a blank image.
 
-## Known limitations
+## ⚠️ Known limitations
 
 - One region per run — to capture a sidebar and main content separately, run
   the tool twice.
@@ -198,3 +223,10 @@ than writing a blank image.
   settle cleanly; the tool warns and continues with a possibly seamed result.
 - Never clicks or types into the target window (see "How it works" above).
 - Linux (X11) and macOS backends are not yet implemented.
+
+## 📄 License
+
+[MIT](LICENSE) © boroppi
+
+Vendored third-party code: [`stb_image_write`](third_party/stb) by Sean Barrett,
+released as public domain / MIT — compatible with the above.

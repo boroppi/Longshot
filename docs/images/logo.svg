@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Longshot logo: a tall page with a magenta capture region selected and a downward scroll arrow">
+  <defs>
+    <linearGradient id="mag" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF3BE0"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <!-- User-space copy: a perfectly vertical path has a zero-width bounding
+         box, so an objectBoundingBox gradient collapses and paints nothing. -->
+    <linearGradient id="magU" gradientUnits="userSpaceOnUse" x1="82" y1="104" x2="460" y2="404">
+      <stop offset="0%" stop-color="#FF3BE0"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFE3C7"/>
+      <stop offset="100%" stop-color="#F7C9E4"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="14%" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="86%" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="fademask">
+      <rect x="0" y="0" width="512" height="512" fill="url(#fade)"/>
+    </mask>
+  </defs>
+
+  <!-- The page: taller than the frame, faded top and bottom, because the
+       document continues past what any single screen shows. -->
+  <g mask="url(#fademask)">
+    <rect x="120" y="8" width="236" height="496" rx="16" fill="#FFFFFF" stroke="#D5D8E8" stroke-width="3"/>
+
+    <!-- hero image block -->
+    <rect x="146" y="40" width="184" height="74" rx="9" fill="url(#hero)"/>
+
+    <!-- text lines -->
+    <g fill="#D3D7E6">
+      <rect x="146" y="132" width="184" height="11" rx="5.5"/>
+      <rect x="146" y="156" width="160" height="11" rx="5.5"/>
+      <rect x="146" y="180" width="176" height="11" rx="5.5"/>
+      <rect x="146" y="204" width="128" height="11" rx="5.5"/>
+    </g>
+
+    <!-- inline figure -->
+    <rect x="146" y="238" width="86" height="62" rx="8" fill="#E4E7F3"/>
+    <g fill="#D3D7E6">
+      <rect x="244" y="238" width="86" height="11" rx="5.5"/>
+      <rect x="244" y="262" width="70" height="11" rx="5.5"/>
+      <rect x="244" y="286" width="86" height="11" rx="5.5"/>
+    </g>
+
+    <g fill="#D3D7E6">
+      <rect x="146" y="322" width="184" height="11" rx="5.5"/>
+      <rect x="146" y="346" width="150" height="11" rx="5.5"/>
+      <rect x="146" y="370" width="184" height="11" rx="5.5"/>
+      <rect x="146" y="394" width="112" height="11" rx="5.5"/>
+      <rect x="146" y="418" width="170" height="11" rx="5.5"/>
+      <rect x="146" y="442" width="140" height="11" rx="5.5"/>
+    </g>
+  </g>
+
+  <!-- The detected capture region, drawn the way the tool draws it. -->
+  <rect x="96" y="118" width="284" height="252" rx="10"
+        fill="url(#mag)" fill-opacity="0.09"
+        stroke="url(#mag)" stroke-width="10"/>
+
+  <!-- corner handles -->
+  <g fill="#FFFFFF" stroke="url(#magU)" stroke-width="7">
+    <rect x="82"  y="104" width="28" height="28" rx="7"/>
+    <rect x="366" y="104" width="28" height="28" rx="7"/>
+    <rect x="82"  y="356" width="28" height="28" rx="7"/>
+    <rect x="366" y="356" width="28" height="28" rx="7"/>
+  </g>
+
+  <!-- Scroll travel: the region is walked top to bottom. -->
+  <g stroke="url(#magU)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 432 156 L 432 398"/>
+    <path d="M 406 370 L 432 398 L 458 370"/>
+  </g>
+</svg>
