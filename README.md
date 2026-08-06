@@ -3,17 +3,70 @@
 Longshot takes a "full page" screenshot of one scrollable panel inside any
 window — a browser tab's main article, a chat log, a code editor's file, a
 PDF viewer — even when that panel is only one of *several* independently
-scrollable regions on screen (say, a page with its own sidebar). You point
-it at the spot you want, it scrolls that spot from top to bottom, capturing
-frames along the way, then stitches them into one continuous tall image.
+scrollable regions on screen. You point it at the spot you want, it scrolls
+that spot from top to bottom capturing frames along the way, then stitches
+them into one continuous tall image.
 
-It works against real applications, not just browsers, and it doesn't need
-any browser extension or app cooperation: it drives the mouse wheel and
-reads the screen like a person would, so it works on whatever you can see.
+It works against real applications, not just browsers, and it needs no
+browser extension or app cooperation: it drives the mouse wheel and reads
+the screen like a person would, so it captures whatever you can actually see.
 
 Windows-only build for now (Linux/X11 and macOS backends are unimplemented;
 `--backend x11` / `--backend macos` return a clean error rather than silently
 doing nothing).
+
+## Why this exists
+
+Browsers already ship a full-page screenshot tool, but it works by re-rendering
+the page at a synthetic viewport the height of the whole document. That has
+real consequences:
+
+- **It effectively reloads the page.** Layout is redone from scratch, so live
+  application state — an open editor, a populated form, a preview you just
+  generated — can be lost or reset before the capture is taken.
+- **It doesn't reliably capture `<canvas>` content.** Canvas and WebGL surfaces
+  typically draw only what fits the visible viewport. Re-rendering tall doesn't
+  redraw them to match, so they come out blank, clipped, or stale.
+- **It only knows about the page.** A scrollable panel inside an app, a native
+  desktop window, a PDF viewer — none of that is reachable.
+
+Longshot sidesteps all of it by never touching the document: it scrolls the
+real UI a notch at a time and reads real pixels off the screen. Whatever is
+actually rendered in front of you is what lands in the image, application state
+intact.
+
+## Example
+
+Capturing the article column of a Wikipedia page. Wikipedia has *three*
+independently scrollable columns — the Contents tree on the left, the article
+in the middle, the Appearance panel on the right — so it's a good test of
+picking out the right one.
+
+```
+longshot capture --anchor 900,600 --out okapi.png
+```
+
+Longshot sends a few scroll notches at that point, diffs the before/after
+screenshots, and outlines the region of pixels that actually moved. It writes
+this confirmation image (`okapi-probe.bmp`) so you can see what it locked onto
+before it captures anything:
+
+<img src="docs/images/probe-region.png" width="820" alt="Detected scrollable region outlined in magenta around the Wikipedia article column">
+
+Note the outline hugs the article column exactly — both sidebars and all the
+browser chrome are correctly excluded, with no configuration and no knowledge
+of Wikipedia's markup.
+
+Then it scrolls that region to the top, walks it to the bottom, and stitches
+the frames. Here the viewport was 908px tall; the finished image is 11013px —
+**37 frames, about 12 screens' worth, in one seamless image**:
+
+<img src="docs/images/stitched-full-page.jpg" width="300" alt="The complete Wikipedia article stitched into one continuous tall image">
+
+```
+detected scrollable region: 476,200 826x908
+captured 37 frames -> stitched 826x11013, wrote okapi.png
+```
 
 ## How it works, briefly
 
@@ -21,23 +74,23 @@ Longshot doesn't read the target application's DOM or accessibility tree —
 that would mean a different integration for every browser and every native
 app. Instead:
 
-1. **Find the region.** You hover the mouse over the scrollable area you
-   want. Longshot sends a few scroll-wheel notches at that point and diffs
-   the before/after screenshots to see exactly which rectangle of pixels
-   actually moved — that's the region, regardless of what app it belongs to
-   or what else is on screen.
+1. **Find the region.** You hover the mouse over the scrollable area you want.
+   Longshot sends a few scroll-wheel notches at that point and diffs the
+   before/after screenshots to see exactly which rectangle of pixels actually
+   moved — that's the region, regardless of what app owns it or what else is
+   on screen.
 2. **Scroll and capture.** It scrolls that region to the top, then walks it
    down to the bottom one step at a time, taking a screenshot at each step.
-3. **Stitch.** Consecutive screenshots overlap (since each scroll step moves
-   less than a full screen), so Longshot cross-correlates each pair to find
-   exactly how many new pixel-rows appeared, and concatenates only the new
-   part. Sticky headers/footers that don't scroll are detected and included
-   exactly once, not once per frame.
+3. **Stitch.** Consecutive screenshots overlap (each scroll step moves less
+   than a full screen), so Longshot cross-correlates each pair to find exactly
+   how many new pixel-rows appeared, and concatenates only the new part. Sticky
+   headers/footers that don't scroll are detected and included once, not once
+   per frame.
 
 The only things Longshot ever sends to the target application are scroll-wheel
-notches and the four navigation keys (Page Up/Down, Home, End) — never a
-click, never typed text — so it can't accidentally follow a link or submit a
-form while it's driving the page.
+notches and the four navigation keys (Page Up/Down, Home, End) — never a click,
+never typed text — so it can't accidentally follow a link or submit a form
+while it's driving the page.
 
 ## Building
 
@@ -62,6 +115,14 @@ Hover the mouse over the scrollable region you want, press ENTER in the
 terminal, confirm the detected region (a `<out>-probe.bmp` outline image is
 written for reference), and the tool scrolls to the top, then to the bottom,
 capturing and stitching as it goes.
+
+### Skipping the hover prompt
+
+Pass the anchor point directly and it probes there without waiting:
+
+```
+longshot capture --anchor 900,600 --yes --out page.png
+```
 
 ### Non-interactive
 
@@ -95,18 +156,28 @@ the motion-diff probe entirely.
 | `--yes` | Skip the confirmation prompt |
 | `-v` / `-q` | Verbose / quiet logging |
 
+Very long pages can exceed the default height cap — Longshot stops with a clear
+error rather than writing a truncated image, so raise `--max-height` when you
+mean to capture something enormous.
+
 ## Permissions
 
 Windows: none required for a normal desktop session. Input injection into an
-**elevated** target window from a non-elevated Longshot process fails
-silently (Windows UIPI) — `longshot doctor` warns about this when Longshot
-itself isn't running elevated.
+**elevated** target window from a non-elevated Longshot process fails silently
+(Windows UIPI) — `longshot doctor` warns about this when Longshot itself isn't
+running elevated.
+
+Capture needs an unlocked, active desktop session: with the workstation locked
+there are no real pixels to read, and Longshot reports a capture failure rather
+than writing a blank image.
 
 ## Known limitations
 
 - One region per run — to capture a sidebar and main content separately, run
   the tool twice.
 - Vertical scrolling only.
+- The detected region may include the target's own scrollbar strip; trim it
+  with `--inset` (e.g. `--inset 0,0,20,0`) if you don't want it.
 - The target window must be on-screen and unobstructed; occluded, minimized,
   or off-virtual-desktop windows are not captured (composited-desktop capture
   only, no per-window capture API).
