@@ -21,9 +21,10 @@ Browsers already ship a full-page screenshot tool, but it works by re-rendering
 the page at a synthetic viewport the height of the whole document. That has
 real consequences:
 
-- **It effectively reloads the page.** Layout is redone from scratch, so live
-  application state — an open editor, a populated form, a preview you just
-  generated — can be lost or reset before the capture is taken.
+- **It re-lays-out the page.** Layout is redone at a synthetic viewport height,
+  which re-triggers resize handlers, lazy-loading and intersection observers.
+  Live application state — an open editor, a populated form, a preview you just
+  generated — can shift or reset before the capture is taken.
 - **It doesn't reliably capture `<canvas>` content.** Canvas and WebGL surfaces
   typically draw only what fits the visible viewport. Re-rendering tall doesn't
   redraw them to match, so they come out blank, clipped, or stale.
@@ -58,15 +59,21 @@ browser chrome are correctly excluded, with no configuration and no knowledge
 of Wikipedia's markup.
 
 Then it scrolls that region to the top, walks it to the bottom, and stitches
-the frames. Here the viewport was 908px tall; the finished image is 11013px —
-**37 frames, about 12 screens' worth, in one seamless image**:
-
-<img src="docs/images/stitched-full-page.jpg" width="300" alt="The complete Wikipedia article stitched into one continuous tall image">
+the frames:
 
 ```
 detected scrollable region: 476,200 826x908
 captured 37 frames -> stitched 826x11013, wrote okapi.png
 ```
+
+The viewport was 908px tall; the finished image is 11013px — **37 frames, about
+12 screens' worth, in one seamless image.** Here's the top of it, spanning
+roughly two screens with no seam where the frames were joined:
+
+<img src="docs/images/stitched-top.jpg" width="700" alt="Top portion of the stitched Wikipedia article, spanning about two screens seamlessly">
+
+→ [**The complete 826×11013 strip**](docs/images/stitched-full-page.jpg) (scaled
+down; it's too tall to show inline at readable size).
 
 ## How it works, briefly
 
@@ -175,6 +182,12 @@ than writing a blank image.
 
 - One region per run — to capture a sidebar and main content separately, run
   the tool twice.
+- **The region must not already be scrolled to the bottom when you start.**
+  Detection works by scrolling *down* and looking for movement, so at the very
+  bottom there is nothing left to move and you get "No scrollable region
+  detected" even though the pointer is over a perfectly good scroller. This
+  bites most often when re-running the tool, since a finished capture leaves
+  the page at the bottom. Scroll up a little and run it again.
 - Vertical scrolling only.
 - The detected region may include the target's own scrollbar strip; trim it
   with `--inset` (e.g. `--inset 0,0,20,0`) if you don't want it.
